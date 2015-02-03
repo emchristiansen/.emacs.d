@@ -1,63 +1,95 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Set up el-get, which should have been git cloned into the indicated 
+;; directory.
+
 (add-to-list 'load-path "~/.emacs.d/el-get/el-get")
 
 (unless (require 'el-get nil 'noerror)
   (with-current-buffer
       (url-retrieve-synchronously
-       "https://raw.github.com/dimitri/el-get/master/el-get-install.el")
+       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
     (goto-char (point-max))
     (eval-print-last-sexp)))
 
-(add-to-list 'el-get-recipe-path "~/dev/emacs/el-get/recipes")
 (add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
 (el-get 'sync)
 (setq el-get-verbose t)
 
-(setq dim-packages
-      (append
-       ;; list of packages we use straight from official recipes
-       '(evil haskell-mode ghc-mod)
-        ;; evil
-        ;; haskell-mode
-         ;;ghc-mod
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Install the desired packages.
 
-       (mapcar 'el-get-as-symbol (mapcar 'el-get-source-name el-get-sources))))
+(el-get-bundle evil)
+(el-get-bundle yasnippet)
 
-(el-get 'sync dim-packages)
+(el-get-bundle scala-mode2)
+(el-get-bundle sbt-mode)
+(el-get-bundle ensime)
 
-(require 'package)
-(add-to-list 'package-archives
-         '("melpa" . "http://melpa.milkbox.net/packages/") t)
-(package-initialize)
-(when (not package-archive-contents)
-  (package-refresh-contents))
+(el-get-bundle python-mode)
 
-(unless (package-installed-p 'scala-mode2)
-  (package-refresh-contents) (package-install 'scala-mode2))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Configure the packages.
 
-(require 'ensime)
-(add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
-(setq ensime-sbt-command "/usr/local/google/home/ericmc/bin/sbt")
-
-(autoload 'ghc-init "ghc" nil t)
-(autoload 'ghc-debug "ghc" nil t)
-(add-hook 'haskell-mode-hook (lambda () (ghc-init)))
-(setq ghc-debug t)
 (require 'evil)
 (evil-mode 1)
 
-;; (speedbar 1)
-;; (speedbar-add-supported-extension ".hs")
+(require 'ensime)
+(add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
+;; This may not be necessary.
+(setq ensime-sbt-command "/usr/local/google/home/ericmc/bin/sbt")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; General configuration.
+
+(add-to-list 'auto-mode-alist '("\\.zsh\\'" . sh-mode))
+
+;; Highlight text that extends beyond 80 characters.
+(require 'whitespace)
+(setq whitespace-style '(face lines-tail))
+(setq whitespace-line-column 80)
+(global-whitespace-mode t)
+
+;; Show line and column numbers.
+(global-linum-mode t)
+(column-number-mode 1)
+
+;; Remove trailing whitespace on save.
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+(global-set-key (kbd "M-<left>")        'previous-buffer)
+(global-set-key (kbd "M-<right>")       'next-buffer)
+
+;; Auto-refresh buffers when disk changes.
+(global-auto-revert-mode t)
+
+;; Comment or uncomment flexibly.
+(defun comment-or-uncomment-region-or-line ()
+    "Comments or uncomments the region or the current line if there's no active region."
+    (interactive)
+    (let (beg end)
+        (if (region-active-p)
+            (setq beg (region-beginning) end (region-end))
+            (setq beg (line-beginning-position) end (line-end-position)))
+        (comment-or-uncomment-region beg end)))
+(global-set-key (kbd "M-i")        'comment-or-uncomment-region-or-line)
+
+;; Do not make backup files.
+;; TODO(emchristiansen): This does not appear to work.
+(setq make-backup-files nil)
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(safe-local-variable-values (quote ((eval ignore-errors "Write-contents-functions is a buffer-local alternative to before-save-hook" (add-hook (quote write-contents-functions) (lambda nil (delete-trailing-whitespace) nil)) (require (quote whitespace)) "Sometimes the mode needs to be toggled off and on." (whitespace-mode 0) (whitespace-mode 1)) (whitespace-line-column . 80) (whitespace-style face tabs trailing lines-tail) (require-final-newline . t)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Google configuration.
 
 (add-to-list 'auto-mode-alist '("\\.pyplan\\'" . python-mode))
 (add-to-list 'auto-mode-alist '("\\.pynet\\'" . python-mode))
-(add-to-list 'auto-mode-alist '("\\.zsh\\'" . sh-mode))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; (add-to-list 'load-path "/google/src/head/depot/eng/elisp")
-;; (require 'google-specific)
 (require 'google)
 
 (require 'google-go)
@@ -73,116 +105,6 @@
   (when (eq major-mode 'c++-mode)
     (google-clang-format-file)))
 (add-hook 'before-save-hook 'try-google-clang-format-file)
-
-;; (require 'google-imports)
-;; (global-set-key [f8] 'google-imports-grab-import)
-;; (global-set-key [f9] 'google-imports-add-grabbed-imports)
-;; (global-set-key [f5] 'gtags-feeling-lucky)
-;; (global-set-key [C-f5] 'gtags-show-tag-locations-under-point)
-;; (global-set-key [f6] 'google-next-tag)
-;; (global-set-key [f7] 'google-pop-tag)
-
-;; (require 'google3-build-fn)
-;; If you want to integrate with EmacsImports
-;; (google3-build-integrate-build-manipulation)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; https://ghc.haskell.org/trac/ghc/wiki/Emacs
-
-; IDO mode
-(setq ido-enable-flex-matching t)
-(setq ido-everywhere t)
-(ido-mode 1)
-
-; 80 char highlight
-(require 'whitespace)
-(setq whitespace-style '(face lines-tail))
-(setq whitespace-line-column 80)
-(global-whitespace-mode t)
-
-; Remove trailing whitespace on save.
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-
-; Show line and column numbers.
-(global-linum-mode t)
-(column-number-mode 1)
-
-(global-set-key (kbd "M-<left>")        'previous-buffer)
-(global-set-key (kbd "M-<right>")       'next-buffer)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Auto-refresh buffers when disk changes.
-(global-auto-revert-mode t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; source: http://steve.yegge.googlepages.com/my-dot-emacs-file
-;; (defun rename-file-and-buffer (new-name)
-;;   "Renames both current buffer and file it's visiting to NEW-NAME."
-;;   (interactive "sNew name: ")
-;;   (let ((name (buffer-name))
-;;         (filename (buffer-file-name)))
-;;     (if (not filename)
-;;         (message "Buffer '%s' is not visiting a file!" name)
-;;       (if (get-buffer new-name)
-;;           (message "A buffer named '%s' already exists!" new-name)
-;;         (progn
-;;           (rename-file name new-name 1)
-;;           (rename-buffer new-name)
-;;           (set-visited-file-name new-name)
-;;           (set-buffer-modified-p nil))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun comment-or-uncomment-region-or-line ()
-    "Comments or uncomments the region or the current line if there's no active region."
-    (interactive)
-    (let (beg end)
-        (if (region-active-p)
-            (setq beg (region-beginning) end (region-end))
-            (setq beg (line-beginning-position) end (line-end-position)))
-        (comment-or-uncomment-region beg end)))
-
-(global-set-key (kbd "M-i")        'comment-or-uncomment-region-or-line)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(setq make-backup-files nil)
-;; (setq backup-directory-alist `(("." . "~/.saves")))
-
-;; (setq backup-by-copying t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; (eval-after-load "haskell-mode"
-    ;; '(define-key haskell-mode-map (kbd "C-c C-c") 'haskell-compile))
-
-;; (eval-after-load "haskell-cabal"
-    ;; '(define-key haskell-cabal-mode-map (kbd "C-c C-c") 'haskell-compile))
-
-
-;; (add-to-list 'load-path "~/.emacs.d/structured-haskell-mode/elisp")
-;; (require 'shm)
-;; (add-hook 'haskell-mode-hook 'structured-haskell-mode)
-;; (setq shm-program-name "~/.emacs.d/structured-haskell-mode/dist/dist-sandbox-d68b3375/build/structured-haskell-mode")
-
-;;(eval-after-load "haskell-mode"
-;;  (define-key haskell-mode-map (kbd "C-c v c") 'haskell-cabal-visit-file))
-
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- ;; '(haskell-stylish-on-save f)
- ;; '(haskell-tags-on-save t)
- '(tab-width 2))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
