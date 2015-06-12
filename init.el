@@ -92,6 +92,6 @@
 (require 'google-cc-extras)
 (google-cc-extras/bind-default-keys)
 (defun try-google-clang-format-file()
-  (when (eq major-mode 'c++-mode)
+  (when (or (eq major-mode 'c++-mode) (eq major-mode 'protobuf-mode))
     (google-clang-format-file)))
 (add-hook 'before-save-hook 'try-google-clang-format-file)
