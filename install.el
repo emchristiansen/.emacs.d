@@ -26,5 +26,3 @@
 (el-get-bundle ensime)
 
 (el-get-bundle python-mode)
-
-(el-get-bundle elm-mode)
